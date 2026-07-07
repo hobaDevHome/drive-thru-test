@@ -4,12 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>طلب صوتي - المطعم</title>
-
-    <!-- LiveKit Client SDK -->
     <script src="https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.umd.min.js"></script>
-
     <style>
-      /* (same as before – keep your styles) */
       * {
         margin: 0;
         padding: 0;
@@ -36,10 +32,6 @@
         border-radius: 32px;
         box-shadow: 0 12px 40px rgba(0, 0, 0, 0.06);
         text-align: center;
-        transition: box-shadow 0.2s;
-      }
-      .card:hover {
-        box-shadow: 0 20px 56px rgba(0, 0, 0, 0.08);
       }
       .icon-circle {
         width: 72px;
@@ -57,14 +49,11 @@
         font-size: 26px;
         font-weight: 600;
         color: #1a1a1a;
-        letter-spacing: -0.3px;
       }
       .sub {
         font-size: 15px;
         color: #6b6b6b;
-        margin-top: 6px;
-        margin-bottom: 28px;
-        line-height: 1.5;
+        margin: 6px 0 28px;
       }
       .status-box {
         background: #f4f2ee;
@@ -82,8 +71,6 @@
         height: 10px;
         border-radius: 50%;
         background: #b0b0b0;
-        display: inline-block;
-        transition: background 0.3s;
       }
       .dot.connected {
         background: #2b9c5c;
@@ -99,98 +86,23 @@
         font-size: 18px;
         font-weight: 500;
         cursor: pointer;
-        transition: all 0.2s;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 10px;
       }
       .btn-primary {
         background: #1a1a1a;
-        color: #ffffff;
-      }
-      .btn-primary:hover:not(:disabled) {
-        background: #333333;
-        transform: scale(1.01);
+        color: #fff;
       }
       .btn-primary:disabled {
         opacity: 0.5;
         cursor: not-allowed;
-        transform: none;
       }
       .btn-danger {
         background: #eae8e4;
         color: #1a1a1a;
-      }
-      .btn-danger:hover:not(:disabled) {
-        background: #ddd9d4;
+        margin-top: 12px;
       }
       .btn-danger:disabled {
         opacity: 0.4;
         cursor: not-allowed;
-      }
-      .btn-group {
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-        margin-top: 8px;
-      }
-      .mic-row {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 10px;
-        margin-top: 20px;
-        font-size: 14px;
-        color: #6b6b6b;
-      }
-      .mic-pulse {
-        width: 12px;
-        height: 12px;
-        border-radius: 50%;
-        background: #d0cdc8;
-        transition: background 0.25s;
-      }
-      .mic-pulse.active {
-        background: #2b9c5c;
-        animation: pulse 1.2s ease-in-out infinite;
-      }
-      @keyframes pulse {
-        0%,
-        100% {
-          transform: scale(1);
-          opacity: 1;
-        }
-        50% {
-          transform: scale(1.5);
-          opacity: 0.5;
-        }
-      }
-      .footer-note {
-        margin-top: 28px;
-        font-size: 13px;
-        color: #9a9a9a;
-        border-top: 1px solid #efedea;
-        padding-top: 24px;
-      }
-      .footer-note code {
-        background: #f0eee9;
-        padding: 2px 10px;
-        border-radius: 20px;
-        font-size: 12px;
-        color: #3a3a3a;
-      }
-      @media (max-width: 480px) {
-        .card {
-          padding: 28px 20px 36px;
-        }
-        h1 {
-          font-size: 22px;
-        }
-        .btn {
-          font-size: 16px;
-          padding: 14px 20px;
-        }
       }
     </style>
   </head>
@@ -206,202 +118,93 @@
         <span id="statusText">غير متصل</span>
       </div>
 
-      <div class="btn-group">
-        <button class="btn btn-primary" id="joinBtn">
-          ▶ &nbsp;ابدأ المحادثة
-        </button>
-        <button class="btn btn-danger" id="leaveBtn" disabled>
-          ✕ &nbsp;إنهاء المكالمة
-        </button>
-      </div>
-
-      <div class="mic-row">
-        <span class="mic-pulse" id="micPulse"></span>
-        <span id="micLabel">الميكروفون غير نشط</span>
-      </div>
-
-      <div class="footer-note">
-        <code>LiveKit</code> &middot; محادثة صوتية فورية
-      </div>
+      <button class="btn btn-primary" id="joinBtn">▶ ابدأ المحادثة</button>
+      <button class="btn btn-danger" id="leaveBtn" disabled>
+        ✕ إنهاء المكالمة
+      </button>
     </div>
 
     <script>
-      // --------------------------------------------------------------
-      // 1. التكوين — غيّري القيم دي بقيم مشروعك من LiveKit Cloud
-      // --------------------------------------------------------------
-      const LIVEKIT_URL = "wss://voice-order-prototype-aclochp2.livekit.cloud"; //
-      const LIVEKIT_API_KEY = "APIpCdDMGp8EUPX"; //
-      const LIVEKIT_API_SECRET = "9BN6yAJvsEl75O7b79zIKd3B6c0PLE5zREeqFZy5hFV"; //
+      const TOKEN_SERVER = "http://localhost:3001/token";
       const ROOM_NAME = "voice-order-room";
 
-      // --------------------------------------------------------------
-      // 2. عناصر الصفحة
-      // --------------------------------------------------------------
       const joinBtn = document.getElementById("joinBtn");
       const leaveBtn = document.getElementById("leaveBtn");
       const statusDot = document.getElementById("statusDot");
       const statusText = document.getElementById("statusText");
-      const micPulse = document.getElementById("micPulse");
-      const micLabel = document.getElementById("micLabel");
 
       let room = null;
-      let isConnected = false;
 
-      // --------------------------------------------------------------
-      // 3. دوال مساعدة
-      // --------------------------------------------------------------
       function setStatus(label, type) {
         statusText.textContent = label;
-        statusDot.className = "dot";
-        if (type === "connected") statusDot.classList.add("connected");
-        else if (type === "error") statusDot.classList.add("error");
+        statusDot.className = "dot" + (type ? " " + type : "");
       }
 
-      function setMicActive(active) {
-        if (active) {
-          micPulse.classList.add("active");
-          micLabel.textContent = "🔴 الميكروفون نشط — تتحدث";
-        } else {
-          micPulse.classList.remove("active");
-          micLabel.textContent = "🎤 الميكروفون غير نشط";
-        }
-      }
-
-      function updateButtons(connected) {
-        joinBtn.disabled = connected;
-        leaveBtn.disabled = !connected;
-      }
-
-      // --------------------------------------------------------------
-      // 4. توليد Token عن طريق الـ local token server
-      // --------------------------------------------------------------
       async function generateToken(roomName, participantName) {
-        const response = await fetch("http://localhost:3001/token", {
+        const response = await fetch(TOKEN_SERVER, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ roomName, participantName }),
         });
         const data = await response.json();
         if (typeof data.token !== "string") {
-          throw new Error("Token is not a string: " + JSON.stringify(data));
+          throw new Error("Token response invalid: " + JSON.stringify(data));
         }
-        return data.token;
+        return data;
       }
 
-      // --------------------------------------------------------------
-      // 5. Join / Leave
-      // --------------------------------------------------------------
       async function joinRoom() {
-        if (isConnected) return;
-
         try {
           setStatus("جاري الاتصال...", "");
           joinBtn.disabled = true;
 
-          // تأكد من وجود المكتبة
           const LiveKit = window.LivekitClient;
-          if (!LiveKit) {
-            throw new Error("مكتبة LiveKit لم تُحمّل. تأكد من اتصال الإنترنت.");
-          }
-          if (typeof LiveKit.Room !== "function") {
-            throw new Error(
-              "الكائن Room غير موجود في المكتبة. تحقق من الإصدار.",
-            );
-          }
-
           const participantId =
             "user-" + Math.random().toString(36).substring(2, 8);
-          const token = await generateToken(ROOM_NAME, participantId);
+          const { token, url } = await generateToken(ROOM_NAME, participantId);
 
-          room = new LiveKit.Room({
-            adaptiveStream: true,
-            dynacast: true,
-          });
+          room = new LiveKit.Room({ adaptiveStream: true, dynacast: true });
 
-          room.on(LiveKit.RoomEvent.ActiveSpeakersChanged, (speakers) => {
-            const isSpeaking = speakers.some(
-              (p) => p.sid === room.localParticipant?.sid,
-            );
-            setMicActive(isSpeaking);
+          // Play back any audio track published by the agent
+          room.on(LiveKit.RoomEvent.TrackSubscribed, (track) => {
+            if (track.kind === "audio") {
+              const el = track.attach();
+              el.autoplay = true;
+              document.body.appendChild(el);
+            }
           });
 
           room.on(LiveKit.RoomEvent.Disconnected, () => {
-            handleDisconnect();
+            setStatus("تم الفصل", "");
+            joinBtn.disabled = false;
+            leaveBtn.disabled = true;
+            room = null;
           });
 
-          await room.connect(LIVEKIT_URL, token);
-          isConnected = true;
-
+          await room.connect(url, token);
           await room.localParticipant.setMicrophoneEnabled(true);
 
           setStatus("متصل ✓", "connected");
-          updateButtons(true);
-          setMicActive(false);
-
-          console.log("✅ متصل بالغرفة:", ROOM_NAME);
+          leaveBtn.disabled = false;
         } catch (err) {
-          console.error("❌ فشل الاتصال:", err);
+          console.error("فشل الاتصال:", err);
           setStatus("فشل الاتصال: " + err.message, "error");
           joinBtn.disabled = false;
-          if (room) {
-            try {
-              room.disconnect();
-            } catch (_) {}
-            room = null;
-          }
-          isConnected = false;
-          updateButtons(false);
         }
-      }
-
-      function handleDisconnect() {
-        if (!isConnected) return;
-        isConnected = false;
-        setStatus("تم الفصل", "");
-        updateButtons(false);
-        setMicActive(false);
-        if (room) {
-          try {
-            room.disconnect();
-          } catch (_) {}
-          room = null;
-        }
-        console.log("🔌 تم الفصل من الغرفة");
       }
 
       async function leaveRoom() {
         if (room) {
-          try {
-            await room.disconnect();
-          } catch (err) {
-            console.warn("خطأ أثناء الفصل:", err);
-          }
+          await room.disconnect();
           room = null;
         }
-        isConnected = false;
         setStatus("غير متصل", "");
-        updateButtons(false);
-        setMicActive(false);
         joinBtn.disabled = false;
-        console.log("👋 تم إنهاء المكالمة");
+        leaveBtn.disabled = true;
       }
 
-      // --------------------------------------------------------------
-      // 6. ربط الأزرار
-      // --------------------------------------------------------------
       joinBtn.addEventListener("click", joinRoom);
       leaveBtn.addEventListener("click", leaveRoom);
-
-      // حالة ابتدائية
-      setStatus("غير متصل", "");
-      updateButtons(false);
-
-      // --------------------------------------------------------------
-      // 7. تحذير: التوكن يُولد بالعميل — غير آمن للإنتاج
-      // --------------------------------------------------------------
-      console.warn(
-        "⚠️ التوكن يُولد في المتصفح باستخدام API_KEY/API_SECRET — هذا غير آمن للإنتاج. استخدم backend endpoint لتوليد التوكن.",
-      );
     </script>
   </body>
 </html>
